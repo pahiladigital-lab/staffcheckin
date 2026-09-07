@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Staff Check-In — Pahila Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f7f3e9;
+    --ink: #171815;
+    --espresso: #2f2a24;
+    --ember: #c1502e;
+    --moss: #4c5a41;
+    --line: rgba(23,24,21,.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(23,24,21,.12);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 28px 28px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .kicker {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ember);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .card-body { padding: 24px 28px 28px; }
+  .step { display: none; }
+  .step.active { display: block; }
+  .type-buttons { display: flex; gap: 12px; margin-bottom: 8px; }
+  .type-btn {
+    flex: 1;
+    padding: 20px 12px;
+    border-radius: 14px;
+    border: 2px solid var(--line);
+    background: #fff;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .type-btn.in { color: var(--moss); }
+  .type-btn.out { color: var(--ember); }
+  .type-btn:hover { border-color: currentColor; }
+  .name-list { display: flex; flex-direction: column; gap: 10px; }
+  .name-btn {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: #fbf9f4;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 16px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .name-btn:hover { border-color: var(--ember); }
+  .pin-dots { display: flex; justify-content: center; gap: 14px; margin: 20px 0; }
+  .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); }
+  .pin-dot.filled { background: var(--espresso); border-color: var(--espresso); }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .key {
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: #fbf9f4;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .key:hover { border-color: var(--ember); }
+  video, canvas { width: 100%; border-radius: 14px; background: #000; }
+  .capture-btn, .primary-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    border: none;
+    background: var(--espresso);
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 14px;
+  }
+  .back-link {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ember);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 0 16px;
+    display: block;
+  }
+  .status { text-align: center; padding: 20px 0; }
+  .status-icon { font-size: 48px; margin-bottom: 12px; }
+  .status-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; margin: 0 0 8px; }
+  .status-detail { font-size: 14px; color: rgba(23,24,21,.6); margin: 0; }
+  .error-text { color: var(--ember); font-size: 13px; text-align: center; margin: 10px 0 0; display: none; }
+  .muted { font-size: 13px; color: rgba(23,24,21,.55); margin: 0 0 16px; }
+  .spinner { width: 20px; height: 20px; border: 3px solid var(--line); border-top-color: var(--ember); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-header">
+    <p class="kicker">Staff Attendance</p>
+    <h1 id="business-name">Check In</h1>
+  </div>
+
+  <div class="card-body">
+
+    <!-- Step 1: Clock In / Clock Out -->
+    <div class="step active" data-step="type">
+      <p class="muted">Are you starting or ending your shift?</p>
+      <div class="type-buttons">
+        <button class="type-btn in" data-type="in">🟢 Clock In</button>
+        <button class="type-btn out" data-type="out">🔴 Clock Out</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Choose name -->
+    <div class="step" data-step="name">
+      <button class="back-link" data-back="type">← Back</button>
+      <p class="muted">Which one is you?</p>
+      <div class="name-list" id="name-list"></div>
+    </div>
+
+    <!-- Step 3: PIN -->
+    <div class="step" data-step="pin">
+      <button class="back-link" data-back="name">← Back</button>
+      <p class="muted">Enter your personal PIN</p>
+      <div class="pin-dots" id="pin-dots">
+        <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+      </div>
+      <div class="keypad" id="keypad"></div>
+      <p class="error-text" id="pin-error">Wrong PIN — try again.</p>
+    </div>
+
+    <!-- Step 4: Camera -->
+    <div class="step" data-step="camera">
+      <button class="back-link" data-back="pin">← Back</button>
+      <p class="muted">Quick photo to confirm it's you</p>
+      <video id="video" autoplay playsinline></video>
+      <canvas id="canvas" style="display:none;"></canvas>
+      <button class="capture-btn" id="capture-btn">📸 Take Photo</button>
+      <p class="error-text" id="camera-error">Couldn't access the camera. Check permissions and try again.</p>
+    </div>
+
+    <!-- Step 5: Confirm photo + location + submit -->
+    <div class="step" data-step="confirm">
+      <button class="back-link" data-back="camera">← Retake photo</button>
+      <img id="photo-preview" style="width:100%;border-radius:14px;" />
+      <button class="primary-btn" id="submit-btn">Confirm & Submit</button>
+      <p class="error-text" id="location-error">Couldn't get your location. Please allow location access and try again.</p>
+    </div>
+
+    <!-- Step 6: Loading -->
+    <div class="step" data-step="loading">
+      <div class="status">
+        <div class="spinner"></div>
+        <p class="status-detail" style="margin-top:14px;">Checking your location and saving...</p>
+      </div>
+    </div>
+
+    <!-- Step 7: Success -->
+    <div class="step" data-step="success">
+      <div class="status">
+        <div class="status-icon">✅</div>
+        <p class="status-title" id="success-title">Clocked in!</p>
+        <p class="status-detail" id="success-detail"></p>
+      </div>
+      <button class="primary-btn" id="done-btn">Done</button>
+    </div>
+
+    <!-- Step 8: Failure -->
+    <div class="step" data-step="failure">
+      <div class="status">
+        <div class="status-icon">⚠️</div>
+        <p class="status-title" id="failure-title">Something went wrong</p>
+        <p class="status-detail" id="failure-detail"></p>
+      </div>
+      <button class="primary-btn" id="retry-btn">Try Again</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ===================== CONFIG =====================
+  const CONFIG = {
+    GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxkqP_EestIgjFV15jSw2k80L9wC89oL_hg3mMplpab6HQX9yUKzaLedRIGz6XQrp9X/exec',
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  const businessId = params.get('business') || '';
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => [...document.querySelectorAll(sel)];
+
+  let state = {
+    type: null,       // 'in' | 'out'
+    name: null,
+    pin: '',
+    photoBase64: null,
+    lat: null,
+    lng: null,
+  };
+
+  let mediaStream = null;
+
+  function showStep(name) {
+    $$('.step').forEach((el) => el.classList.toggle('active', el.dataset.step === name));
+  }
+
+  // ---- Step 1: type ----
+  $$('.type-btn').forEach((btn) => btn.addEventListener('click', () => {
+    state.type = btn.dataset.type;
+    loadNameList();
+    showStep('name');
+  }));
+
+  // ---- Step 2: name list ----
+  async function loadNameList() {
+    const list = $('#name-list');
+    list.innerHTML = '<p class="muted">Loading...</p>';
+    try {
+      const res = await fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ businessId, type: 'staff-list' }),
+      });
+      const data = await res.json();
+      list.innerHTML = '';
+      (data.names || []).forEach((name) => {
+        const btn = document.createElement('button');
+        btn.className = 'name-btn';
+        btn.textContent = name;
+        btn.addEventListener('click', () => {
+          state.name = name;
+          state.pin = '';
+          updatePinDots();
+          showStep('pin');
+        });
+        list.appendChild(btn);
+      });
+      if (!data.names || data.names.length === 0) {
+        list.innerHTML = '<p class="muted">No staff found for this business yet.</p>';
+      }
+    } catch (err) {
+      list.innerHTML = '<p class="muted">Could not load staff list. Check your connection.</p>';
+    }
+  }
+
+  // ---- Step 3: PIN keypad ----
+  const keypad = $('#keypad');
+  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach((k) => {
+    const btn = document.createElement('button');
+    btn.className = 'key';
+    btn.textContent = k;
+    if (k === '') { btn.style.visibility = 'hidden'; }
+    else {
+      btn.addEventListener('click', () => {
+        if (k === '⌫') { state.pin = state.pin.slice(0, -1); }
+        else if (state.pin.length < 4) { state.pin += k; }
+        updatePinDots();
+        if (state.pin.length === 4) {
+          setTimeout(() => startCamera(), 150);
+        }
+      });
+    }
+    keypad.appendChild(btn);
+  });
+
+  function updatePinDots() {
+    const dots = $$('#pin-dots .pin-dot');
+    dots.forEach((dot, i) => dot.classList.toggle('filled', i < state.pin.length));
+  }
+
+  // ---- Step 4: Camera ----
+  async function startCamera() {
+    $('#camera-error').style.display = 'none';
+    showStep('camera');
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      $('#video').srcObject = mediaStream;
+    } catch (err) {
+      $('#camera-error').style.display = 'block';
+    }
+  }
+
+  $('#capture-btn').addEventListener('click', () => {
+    const video = $('#video');
+    const canvas = $('#canvas');
+    canvas.width = video.videoWidth || 480;
+    canvas.height = video.videoHeight || 360;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+    state.photoBase64 = dataUrl.split(',')[1];
+    $('#photo-preview').src = dataUrl;
+    if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
+    showStep('confirm');
+  });
+
+  // ---- Step 5: Confirm + location + submit ----
+  $('#submit-btn').addEventListener('click', () => {
+    $('#location-error').style.display = 'none';
+    showStep('loading');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        state.lat = pos.coords.latitude;
+        state.lng = pos.coords.longitude;
+        submitCheckin();
+      },
+      () => {
+        showStep('confirm');
+        $('#location-error').style.display = 'block';
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+
+  async function submitCheckin() {
+    try {
+      const res = await fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          businessId,
+          name: state.name,
+          pin: state.pin,
+          type: state.type,
+          lat: state.lat,
+          lng: state.lng,
+          photoBase64: state.photoBase64,
+          checkinAction: 'staff-checkin',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        $('#success-title').textContent = state.type === 'in' ? 'Clocked in!' : 'Clocked out!';
+        $('#success-detail').textContent = `${state.name} • ${new Date().toLocaleTimeString()} • ${data.distanceMeters}m from the shop`;
+        showStep('success');
+      } else {
+        showFailure(data.error, data.distanceMeters);
+      }
+    } catch (err) {
+      showFailure('NETWORK_ERROR');
+    }
+  }
+
+  function showFailure(error, distanceMeters) {
+    const messages = {
+      INVALID_PIN: "That PIN doesn't match — check with your manager if you forgot it.",
+      TOO_FAR: `You're ${distanceMeters}m from the shop — you need to be closer to check in.`,
+      BUSINESS_LOCATION_NOT_SET: "This business isn't fully set up yet — ask the owner to contact Pahila Digital.",
+      MISSING_FIELDS: 'Something was missing — please try the whole process again.',
+      NETWORK_ERROR: 'Could not connect. Check your internet connection and try again.',
+    };
+    $('#failure-detail').textContent = messages[error] || 'Please try again.';
+    showStep('failure');
+  }
+
+  // ---- Reset flow ----
+  function resetFlow() {
+    state = { type: null, name: null, pin: '', photoBase64: null, lat: null, lng: null };
+    showStep('type');
+  }
+  $('#done-btn').addEventListener('click', resetFlow);
+  $('#retry-btn').addEventListener('click', resetFlow);
+
+  // ---- Back buttons ----
+  $$('[data-back]').forEach((btn) => btn.addEventListener('click', () => {
+    if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
+    showStep(btn.dataset.back);
+  }));
+
+  if (!businessId) {
+    $('#business-name').textContent = 'No business specified';
+  }
+</script>
+
+</body>
+</html>
