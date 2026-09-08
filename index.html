@@ -392,8 +392,10 @@
       BUSINESS_LOCATION_NOT_SET: "This business isn't fully set up yet — ask the owner to contact Pahila Digital.",
       MISSING_FIELDS: 'Something was missing — please try the whole process again.',
       NETWORK_ERROR: 'Could not connect. Check your internet connection and try again.',
+      TOO_MANY_ATTEMPTS: 'Too many wrong attempts. Please wait 5 minutes and try again.',
+      RATE_LIMITED: 'Too many check-ins too quickly. Please wait a moment and try again.',
     };
-    $('#failure-detail').textContent = messages[error] || 'Please try again.';
+    $('#failure-detail').textContent = messages[error] || `Please try again. (error: ${error || 'unknown'})`;
     showStep('failure');
   }
 
